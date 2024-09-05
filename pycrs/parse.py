@@ -34,13 +34,14 @@ def from_epsg_code(code):
 
     Returns:
 
-    - A CS instance of the indicated type. 
+    - A CS instance of the indicated type.
     """
     # must go online (or look up local table) to get crs details
     code = str(code)
     proj4 = utils.crscode_to_string("epsg", code, "proj4")
     crs = from_proj4(proj4)
     return crs
+
 
 def from_esri_code(code):
     """
@@ -53,13 +54,14 @@ def from_esri_code(code):
 
     Returns:
 
-    - A CS instance of the indicated type. 
+    - A CS instance of the indicated type.
     """
     # must go online (or look up local table) to get crs details
     code = str(code)
     proj4 = utils.crscode_to_string("esri", code, "proj4")
     crs = from_proj4(proj4)
     return crs
+
 
 def from_sr_code(code):
     """
@@ -72,13 +74,14 @@ def from_sr_code(code):
 
     Returns:
 
-    - A CS instance of the indicated type. 
+    - A CS instance of the indicated type.
     """
     # must go online (or look up local table) to get crs details
     code = str(code)
     proj4 = utils.crscode_to_string("sr-org", code, "proj4")
     crs = from_proj4(proj4)
     return crs
+
 
 def from_ogc_wkt(string, strict=False):
     """
@@ -92,11 +95,12 @@ def from_ogc_wkt(string, strict=False):
 
     Returns:
 
-    - A CS instance of the indicated type. 
+    - A CS instance of the indicated type.
     """
     # parse arguments into components
     # use args to create crs
     return _from_wkt(string, "ogc", strict)
+
 
 def from_esri_wkt(string, strict=False):
     """
@@ -110,11 +114,12 @@ def from_esri_wkt(string, strict=False):
 
     Returns:
 
-    - A CS instance of the indicated type. 
+    - A CS instance of the indicated type.
     """
     # parse arguments into components
     # use args to create crs
     return _from_wkt(string, "esri", strict)
+
 
 def from_unknown_wkt(string, strict=False):
     """
@@ -127,11 +132,12 @@ def from_unknown_wkt(string, strict=False):
         exactly with upper and lowercases. Default is not strict (False).
 
     Returns:
-    - A CS instance of the indicated type. 
+    - A CS instance of the indicated type.
     """
     # parse arguments into components
     # use args to create crs
     return _from_wkt(string, None, strict)
+
 
 def _from_wkt(string, wkttype=None, strict=False):
     """
@@ -140,13 +146,13 @@ def _from_wkt(string, wkttype=None, strict=False):
     Arguments:
 
     - *string*: The OGC or ESRI WKT representation as a string.
-    - *wkttype* (optional): How to parse the WKT string, as either 'ogc', 'esri', or None. If None, tries to autodetect the wkt type before parsing (default). 
+    - *wkttype* (optional): How to parse the WKT string, as either 'ogc', 'esri', or None. If None, tries to autodetect the wkt type before parsing (default).
     - *strict* (optional): When True, the parser is strict about names having to match
         exactly with upper and lowercases. Default is not strict (False).
 
     Returns:
 
-    - A CS instance of the indicated type. 
+    - A CS instance of the indicated type.
     """
     # TODO
     # - Make function for finding next elemt by name, instead of knowing its arg index position
@@ -154,11 +160,11 @@ def _from_wkt(string, wkttype=None, strict=False):
 
     # make sure valid wkttype
     if wkttype: wkttype = wkttype.lower()
-    assert wkttype in ("ogc","esri",None)
-    
+    assert wkttype in ("ogc", "esri", None)
+
     # remove newlines and multi spaces
     string = " ".join(string.split())
-    
+
     # parse arguments into components
     def _consume_bracket(chars, char):
         "char must be the opening bracket"
@@ -172,23 +178,23 @@ def _from_wkt(string, wkttype=None, strict=False):
                 depth += 1
             elif char == "]":
                 depth -= 1
-        consumed += char # consume the last closing char too
+        consumed += char  # consume the last closing char too
         return consumed
-    
+
     def _consume_quote(chars, char, quotechar):
         "char and quotechar must be the opening quote char"
         consumed = ""
         # consume the first opening char
-        consumed += char 
+        consumed += char
         char = next(chars, None)
         # consume inside
         while char and char != quotechar:
             consumed += char
             char = next(chars, None)
         # consume the last closing char too
-        consumed += char 
+        consumed += char
         return consumed
-    
+
     def _next_elem(chars, char):
         "char must be the first char of the text that precedes brackets"
         header = ""
@@ -207,23 +213,25 @@ def _from_wkt(string, wkttype=None, strict=False):
             content = _consume_bracket(chars, char)
         char = next(chars, None)
         # split content into args list
-        content = content[1:-1] # remove enclosing brackets
+        content = content[1:-1]  # remove enclosing brackets
         content = _split_except(content)
         # recursively load all subelems
-        for i,item in enumerate(content):
+        for i, item in enumerate(content):
             if isinstance(item, str) and "[" in item:
                 chars = (char for char in item)
                 char = next(chars)
                 item = _next_elem(chars, char)
                 content[i] = item
         return header, content
-    
+
     def _clean_value(string):
         string = string.strip()
-        try: string = float(string)
-        except: pass
+        try:
+            string = float(string)
+        except:
+            pass
         return string
-    
+
     def _split_except(string):
         "split the string on every comma, except not while inside quotes or square brackets"
         chars = (char for char in string)
@@ -251,28 +259,28 @@ def _from_wkt(string, wkttype=None, strict=False):
         consumed = _clean_value(consumed)
         items.append(consumed)
         return items
-    
+
     # load into nested tuples and arglists
     crstuples = []
     chars = (char for char in string)
     char = next(chars)
     while char:
-        header,content = _next_elem(chars, char)
+        header, content = _next_elem(chars, char)
         crstuples.append((header, content))
         char = next(chars, None)
 
     # autodetect wkttype if not specified
     if not wkttype:
-        topheader,topcontent = crstuples[0]
+        topheader, topcontent = crstuples[0]
         if topheader == "PROJCS":
-            geogcsheader,geogcscontent = topcontent[1]
+            geogcsheader, geogcscontent = topcontent[1]
         elif topheader == "GEOGCS":
-            geogcsheader,geogcscontent = topheader,topcontent
+            geogcsheader, geogcscontent = topheader, topcontent
 
         # datum elem should be second under geogcs
         datumheader, datumcontent = geogcscontent[1]
         datumname = datumcontent[0].upper().strip('"')
-        
+
         # esri wkt datums all use "D_" before the datum name
         if datumname.startswith("D_"):
             wkttype = "esri"
@@ -283,18 +291,18 @@ def _from_wkt(string, wkttype=None, strict=False):
     def _parse_top(header, content):
         "procedure for parsing the toplevel crs element and all its children"
         if header.upper() == "PROJCS":
-            
+
             # find name
             csname = content[0].strip('"')
-            
+
             # find geogcs elem (by running parse again)
             subheader, subcontent = content[1]
             geogcs = _parse_top(subheader, subcontent)
-            
+
             # find projection elem
             for part in content:
                 if isinstance(part, tuple):
-                    subheader,subcontent = part
+                    subheader, subcontent = part
                     if subheader == "PROJECTION":
                         break
             projname = subcontent[0].strip('"')
@@ -302,53 +310,58 @@ def _from_wkt(string, wkttype=None, strict=False):
             if projclass:
                 proj = projclass()
             else:
-                raise NotImplementedError("Unsupported projection: The specified projection name %r could not be found in the list of supported projections" % projname)
-            
+                raise NotImplementedError(
+                    "Unsupported projection: The specified projection name %r could not be found in the list of supported projections" % projname)
+
             # find params
+            # ZACH UPDATES
+            valid_params = ["central_meridian", "false_easting", "false_northing", "latitude_of_origin",
+                            "standard_parallel_1", "standard_parallel_2", "scale_factor", "azimuth"]
             params = []
             for part in content:
                 if isinstance(part, tuple):
-                    subheader,subcontent = part
+                    subheader, subcontent = part
                     if subheader == "PARAMETER":
                         name, value = subcontent[0].strip('"'), subcontent[1]
-                        itemclass = parameters.find(name, "%s_wkt" % wkttype, strict)
-                        if itemclass:
-                            item = itemclass(value)
-                            params.append(item)
-                            
+                        params.append((name.lower(), value))
+            for vp in valid_params:
+                if vp not in [p[0] for p in params]:
+                    params.append((vp, "None"))
+            # ZACH UPDATES END
+
             # find unit
             for part in content:
                 if isinstance(part, tuple):
-                    subheader,subcontent = part
+                    subheader, subcontent = part
                     if subheader == "UNIT":
                         break
-            unitname,value = subcontent[0].strip('"'), subcontent[1]
+            unitname, value = subcontent[0].strip('"'), subcontent[1]
             unitclass = units.find(unitname, "%s_wkt" % wkttype, strict)
             if unitclass:
                 unit = unitclass()
             else:
                 unit = units.Unknown()
 
-            unit.unitmultiplier.value = value # override default multiplier
+            unit.unitmultiplier.value = value  # override default multiplier
             linunit = unit
-            
+
             # find twin axis maybe
-##            if len(content) >= 6:
-##                twinax = (parameters.Axis(
-##            else:
-##                twinax = None
-            
+            ##            if len(content) >= 6:
+            ##                twinax = (parameters.Axis(
+            ##            else:
+            ##                twinax = None
+
             # put it all together
-            projcs = containers.ProjCS(csname, geogcs, proj, params, linunit) #, twinax)
+            projcs = containers.ProjCS(csname, geogcs, proj, params, linunit)  # , twinax)
             return projcs
 
         elif header.upper() == "GEOGCS":
             # name
             csname = content[0].strip('"')
-            
+
             # datum
             subheader, subcontent = content[1]
-            
+
             ## datum name
             datumname = subcontent[0].strip('"')
             datumclass = datums.find(datumname, "%s_wkt" % wkttype, strict)
@@ -356,7 +369,7 @@ def _from_wkt(string, wkttype=None, strict=False):
                 datum = datumclass()
             else:
                 datum = datums.Unknown()
-                
+
             ## datum ellipsoid
             subsubheader, subsubcontent = subcontent[1]
             ellipsname = subsubcontent[0].strip('"')
@@ -379,7 +392,7 @@ def _from_wkt(string, wkttype=None, strict=False):
 
             ## datum shift
             if wkttype == "ogc":
-                for subsubheader,subsubcontent in subcontent[1:]:
+                for subsubheader, subsubcontent in subcontent[1:]:
                     if subsubheader == "TOWGS84":
                         datumshift = parameters.DatumShift(subsubcontent)
                         break
@@ -388,29 +401,29 @@ def _from_wkt(string, wkttype=None, strict=False):
             elif wkttype == "esri":
                 # not used in esri wkt
                 datumshift = None
-                
+
             ## put it all togehter
             datum.ellips = ellipsoid
             datum.datumshift = datumshift
-            
+
             # prime mer
             subheader, subcontent = content[2]
             prime_mer = parameters.PrimeMeridian(subcontent[1])
-            
+
             # angunit
             subheader, subcontent = content[3]
-            unitname,value = subcontent[0].strip('"'), subcontent[1]
+            unitname, value = subcontent[0].strip('"'), subcontent[1]
             unitclass = units.find(unitname, "%s_wkt" % wkttype, strict)
             if unitclass:
                 unit = unitclass()
             else:
                 unit = units.Unknown()
-            unit.unitmultiplier.value = value # override default multiplier
+            unit.unitmultiplier.value = value  # override default multiplier
             angunit = unit
-            
+
             # twin axis
             # ...
-            
+
             # put it all together
             geogcs = containers.GeogCS(csname, datum, prime_mer, angunit, twin_ax=None)
             return geogcs
@@ -418,9 +431,10 @@ def _from_wkt(string, wkttype=None, strict=False):
     # toplevel collection
     header, content = crstuples[0]
     crs = _parse_top(header, content)
-        
+
     # use args to create crs
     return crs
+
 
 def from_proj4(proj4, strict=False):
     """
@@ -434,7 +448,7 @@ def from_proj4(proj4, strict=False):
 
     Returns:
 
-    - A CS instance of the indicated type. 
+    - A CS instance of the indicated type.
     """
     # parse arguments into components
     # use args to create crs
@@ -445,10 +459,10 @@ def from_proj4(proj4, strict=False):
 
     if isinstance(proj4, dict):
         # add leading + sign as expected below, proj4 dicts do not have that
-        partdict = dict([('+'+k,v) for k,v in proj4.items()])
-    else: 
+        partdict = dict([('+' + k, v) for k, v in proj4.items()])
+    else:
         partdict = dict([part.split("=") for part in proj4.split()
-                         if len(part.split("=")) == 2 ])
+                         if len(part.split("=")) == 2])
 
     # INIT CODES
     # eg, +init=EPSG:1234
@@ -464,21 +478,21 @@ def from_proj4(proj4, strict=False):
 
         # make the default into param dict
         initpartdict = dict([part.split("=") for part in initproj4.split()
-                             if len(part.split("=")) == 2 ])
+                             if len(part.split("=")) == 2])
 
         # override the default with any custom params specified along with the +init code
         initpartdict.update(partdict)
 
         # rerun from_proj4() again on the derived proj4 params as if it was not made with the +init code
         del initpartdict["+init"]
-        string = " ".join("%s=%s" % (key,val) for key,val in initpartdict.items())
+        string = " ".join("%s=%s" % (key, val) for key, val in initpartdict.items())
         return from_proj4(string)
 
     # DATUM
 
     # datum param is required
     if "+datum" in partdict:
-        
+
         # get predefined datum def
         datumname = partdict["+datum"]
         datumclass = datums.find(datumname, "proj4", strict)
@@ -502,7 +516,9 @@ def from_proj4(proj4, strict=False):
         if ellipsclass:
             ellips = ellipsclass()
         else:
-            warnings.warn('Ellipsoid "{}" could not be found in pycrs.ellipsoids, looking for manual specification instead.'.format(ellipsname))
+            warnings.warn(
+                'Ellipsoid "{}" could not be found in pycrs.ellipsoids, looking for manual specification instead.'.format(
+                    ellipsname))
 
     if not ellips:
         if datum.ellips:
@@ -526,7 +542,7 @@ def from_proj4(proj4, strict=False):
     # here we set or overwrite the parameters manually
     if "+a" in partdict:
         # semimajor radius
-        ellips.semimaj_ax = parameters.SemiMajorRadius(partdict["+a"])        
+        ellips.semimaj_ax = parameters.SemiMajorRadius(partdict["+a"])
 
     if "+b" in partdict:
         # semiminor radius
@@ -552,10 +568,13 @@ def from_proj4(proj4, strict=False):
         # alternatively, semimajor and +rf is also acceptable (the reciprocal/inverse of +f)
         pass
     elif isinstance(ellips, ellipsoids.Unknown):
-        raise Exception("Ellipsoid '{}' could not be found in pycrs.ellipsoids, and the format string did not contain the alternative manual specification of the +a with +b or +f/+rf elements".format(ellipsname))
+        raise Exception(
+            "Ellipsoid '{}' could not be found in pycrs.ellipsoids, and the format string did not contain the alternative manual specification of the +a with +b or +f/+rf elements".format(
+                ellipsname))
     else:
-        raise FormatError("The format string is missing the required +ellps element, or the alternative manual specification of the +a with +b or +f/+rf elements: \n\t %s" % partdict)
-    
+        raise FormatError(
+            "The format string is missing the required +ellps element, or the alternative manual specification of the +a with +b or +f/+rf elements: \n\t %s" % partdict)
+
     if "+datum" in partdict:
         datum.ellips = ellips
 
@@ -575,17 +594,17 @@ def from_proj4(proj4, strict=False):
     if "+pm" in partdict:
         prime_mer = parameters.PrimeMeridian(partdict["+pm"])
 
-    # ANGULAR UNIT    
+    # ANGULAR UNIT
 
     ## proj4 cannot set angular unit, so just set to default
-    angunit = units.Degree() 
+    angunit = units.Degree()
 
     # GEOGCS (note, currently does not load axes)
 
-    geogcs = containers.GeogCS("Unknown", datum, prime_mer, angunit) #, twin_ax)
+    geogcs = containers.GeogCS("Unknown", datum, prime_mer, angunit)  # , twin_ax)
 
     # PROJECTION
-    
+
     if "+proj" in partdict:
 
         # get predefined proj def
@@ -597,7 +616,8 @@ def from_proj4(proj4, strict=False):
             # proj4 special case, longlat as projection name means unprojected geogcs
             proj = None
         else:
-            raise NotImplementedError("Unsupported projection: The specified projection name %r could not be found in the list of supported projections" % projname)
+            raise NotImplementedError(
+                "Unsupported projection: The specified projection name %r could not be found in the list of supported projections" % projname)
 
     else:
         raise FormatError("The format string is missing the required +proj element")
@@ -631,10 +651,12 @@ def from_proj4(proj4, strict=False):
             params.append(obj)
 
         # SCALING FACTOR
-        
+
         if "+k_0" in partdict or "+k" in partdict:
-            if "+k_0" in partdict: val = partdict["+k_0"]
-            elif "+k" in partdict: val = partdict["+k"]
+            if "+k_0" in partdict:
+                val = partdict["+k_0"]
+            elif "+k" in partdict:
+                val = partdict["+k"]
             obj = parameters.ScalingFactor(val)
             params.append(obj)
 
@@ -672,14 +694,14 @@ def from_proj4(proj4, strict=False):
             val = partdict["+lat_1"]
             obj = parameters.LatitudeFirstStndParallel(val)
             params.append(obj)
-            
+
         # STD PARALLEL 2
 
         if "+lat_2" in partdict:
             val = partdict["+lat_2"]
             obj = parameters.LatitudeSecondStndParallel(val)
             params.append(obj)
-            
+
         # SATELLITE HEIGHT
         if "+h" in partdict:
             val = partdict["+h"]
@@ -700,7 +722,7 @@ def from_proj4(proj4, strict=False):
             unitname = partdict["+units"]
             unitclass = units.find(unitname, "proj4", strict)
             if unitclass:
-                unit = unitclass() # takes meter multiplier from name, ignoring any custom meter multiplier
+                unit = unitclass()  # takes meter multiplier from name, ignoring any custom meter multiplier
             else:
                 raise FormatError("The specified unit name %r does not appear to be a valid unit name" % unitname)
         elif "+to_meter" in partdict:
@@ -752,7 +774,7 @@ def from_unknown_text(text, strict=False):
 
     Arguments:
 
-    - *text*: The crs text representation of unknown type. 
+    - *text*: The crs text representation of unknown type.
     - *strict* (optional): When True, the parser is strict about names having to match
         exactly with upper and lowercases. Default is not strict (False).
 
@@ -764,10 +786,10 @@ def from_unknown_text(text, strict=False):
     if text.startswith("+"):
         crs = from_proj4(text, strict)
 
-    elif text.startswith(("PROJCS[","GEOGCS[")):
+    elif text.startswith(("PROJCS[", "GEOGCS[")):
         crs = from_unknown_wkt(text, strict)
 
-    #elif text.startswith("urn:"):
+    # elif text.startswith("urn:"):
     #    crs = from_ogc_urn(text, strict)
 
     elif text.startswith("EPSG:"):
@@ -779,10 +801,10 @@ def from_unknown_text(text, strict=False):
     elif text.startswith("SR-ORG:"):
         crs = from_sr_code(text.split(":")[1])
 
-    else: raise FormatError("Could not auto-detect the type of crs format, make sure it is one of the supported formats")
-    
-    return crs
+    else:
+        raise FormatError("Could not auto-detect the type of crs format, make sure it is one of the supported formats")
 
+    return crs
 
 ##def from_geotiff_parameters(**params):
 ##    pass
