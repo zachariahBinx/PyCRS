@@ -15,8 +15,10 @@ def find(projname, crstype, strict=False):
         such as underscore or character casing, otherwise must be exact
         match (defaults to False). 
     """
+
     if not strict:
         projname = projname.lower().replace(" ","_")
+
     for itemname,item in globals().items():
         if itemname.startswith("_"):
             continue
@@ -24,8 +26,13 @@ def find(projname, crstype, strict=False):
             if hasattr(item.name, crstype):
                 itemname = getattr(item.name, crstype)
                 if not strict:
-                    itemname = itemname.lower().replace(" ","_")
-                if projname == itemname:
+                    # Zach edits 09-05-2024
+                    # Create a list of item lower names and check if projname is within the list
+                    # Changed due to updating OblicqueMercator class to include additional variants
+                    # itemname = itemname.lower().replace(" ","_")
+                    itemname = [i.lower().replace(" ","_") for i in itemname]\
+                        if isinstance(itemname, tuple) else [itemname.lower().replace(" ","_")]
+                if projname in itemname:
                     return item
         except:
             pass
@@ -68,8 +75,6 @@ class ProjName:
         self.esri_wkt = esri_wkt
 
 
-
-
 # Specific predefined ellipsoid classes    
 class Robinson(Projection):
     name = ProjName(
@@ -89,7 +94,8 @@ class ObliqueMercator(Projection):
     name = ProjName(
         proj4 = "omerc",
         ogc_wkt = "Hotine_Oblique_Mercator_Two_Point_Natural_Origin", #"Hotine_Oblique_Mercator"
-        esri_wkt = "Hotine_Oblique_Mercator_Two_Point_Natural_Origin", #"Hotine_Oblique_Mercator_Azimuth_Natural_Origin"
+        esri_wkt = ("Hotine_Oblique_Mercator_Two_Point_Natural_Origin",
+        "Hotine_Oblique_Mercator_Azimuth_Natural_Origin"),
         )
     
 class AlbersEqualArea(Projection):

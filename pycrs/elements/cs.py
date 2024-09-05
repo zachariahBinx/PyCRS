@@ -1,59 +1,84 @@
 """
 Coordinate system (CS) classes of different types.
 """
-
+import sys
 from . import directions
 from . import datums
 from . import ellipsoids
 
 from .. import utils
 
-#BASE
+
+# ZACH UPDATES
+# PARAMETERS
+class Param:
+    """
+    Added for parameters to be called without having to index them
+    Generated with ChatGPT
+    """
+
+    def __init__(self, name, value):
+        setattr(self, name, value)
+
+    def __str__(self):
+        """
+        Returns a string representation of the attribute names.
+        """
+        # Collect all attribute names
+        attributes = vars(self)  # Get the dictionary of attributes
+        # Return a comma-separated string of attribute names
+        return ', '.join(attributes.keys())
+
+
+# ZACH UPDATES END
+
+# BASE
 class CS:
     """
-    Base class for all CS classes. 
-    Mostly just for basic type checking. 
+    Base class for all CS classes.
+    Mostly just for basic type checking.
     """
 
     def to_epsg_code(self):
         """
         Looks up the EPSG code for this CS.
-        
+
         If an exact match is found, returns the code.
-        If there are multiple ambiguous matches, raise warning and return only the top result. 
+        If there are multiple ambiguous matches, raise warning and return only the top result.
         If there are no matches, returns None.
         """
         result = utils.wkt_to_epsg(self.to_esri_wkt())
         if result['exact']:
             first = result['codes'][0]
             return int(first['code'])
-        
+
         elif len(result['codes']) > 1:
-            warnings.warn('Multiple possible matches found, returning only the top result. To see all the possible matches, use instead pycrs.utils.wkt_to_epsg().')
+            warnings.warn(
+                'Multiple possible matches found, returning only the top result. To see all the possible matches, use instead pycrs.utils.wkt_to_epsg().')
             return None
 
         else:
             return None
-        
 
-#GEOGCS
+
+# GEOGCS
 class GeogCS(CS):
     """
     A geographic coordinate system where the coordinates are in the latitude-longitude space.
-    
+
     Attributes:
-    
+
         - **cs_type**: Type of CRS, always "Geographic".
         - **name**: An arbitrary name given to this geographic coordinate system, to represent its unique
                     configuration of datum, prime meridian, angular unit, and twin axes. The actual name
-                    is just for human readability, and does not actually have any implication. 
+                    is just for human readability, and does not actually have any implication.
         - **datum**: A pycrs.elements.datums.Datum instance, representing the shape of the earth.
         - **prime_mer**: A pycrs.elements.parameters.PrimeMeridian instance, representing the prime meridian
                     coordinate where the longitude is considered to be 0.
         - **angunit**: A pycrs.elements.parameters.AngularUnit instance, representing the angular unit in which
                     coordinates are measured.
         - **twin_ax**: A pair of pycrs.elements.directions.North/South/East/West instances, one for each axis,
-                    representing the compass direction in which each axis increases. Defaults to East and North. 
+                    representing the compass direction in which each axis increases. Defaults to East and North.
 
     """
     ogc_wkt = "GEOGCS"
@@ -65,17 +90,17 @@ class GeogCS(CS):
 
         - **name**: An arbitrary name given to this geographic coordinate system, to represent its unique
                     configuration of datum, prime meridian, angular unit, and twin axes. The actual name
-                    is just for human readability, and does not actually have any implication. 
+                    is just for human readability, and does not actually have any implication.
         - **datum**: A pycrs.elements.datums.Datum instance, representing the shape of the earth.
         - **prime_mer**: A pycrs.elements.parameters.PrimeMeridian instance, representing the prime meridian
                     coordinate where the longitude is considered to be 0.
         - **angunit**: A pycrs.elements.parameters.AngularUnit instance, representing the angular unit in which
                     coordinates are measured.
         - **twin_ax**: A pair of pycrs.elements.directions.North/South/East/West instances, one for each axis,
-                    representing the compass direction in which each axis increases. Defaults to East and North. 
+                    representing the compass direction in which each axis increases. Defaults to East and North.
         """
         self.cs_type = "Geographic"
-        
+
         self.name = name
         self.datum = datum
         self.prime_mer = prime_mer
@@ -102,10 +127,10 @@ class GeogCS(CS):
             string = "%s %s" % (self.datum.to_proj4(), self.prime_mer.to_proj4())
         if as_dict:
             return dict([
-                        entry.lstrip('+').split('=')
-                        for entry in string.split()
-                        if entry != "+no_defs"
-                         ])
+                entry.lstrip('+').split('=')
+                for entry in string.split()
+                if entry != "+no_defs"
+            ])
         else:
             return string
 
@@ -113,19 +138,24 @@ class GeogCS(CS):
         """
         Returns the CS as a OGC WKT formatted string.
         """
-        return 'GEOGCS["%s", %s, %s, %s, AXIS["Lon", %s], AXIS["Lat", %s]]' % (self.name, self.datum.to_ogc_wkt(), self.prime_mer.to_ogc_wkt(), self.angunit.to_ogc_wkt(), self.twin_ax[0].ogc_wkt, self.twin_ax[1].ogc_wkt )
-    
+        return 'GEOGCS["%s", %s, %s, %s, AXIS["Lon", %s], AXIS["Lat", %s]]' % (
+        self.name, self.datum.to_ogc_wkt(), self.prime_mer.to_ogc_wkt(), self.angunit.to_ogc_wkt(),
+        self.twin_ax[0].ogc_wkt, self.twin_ax[1].ogc_wkt)
+
     def to_esri_wkt(self):
         """
         Returns the CS as a ESRI WKT formatted string.
         """
-        return 'GEOGCS["%s", %s, %s, %s, AXIS["Lon", %s], AXIS["Lat", %s]]' % (self.name, self.datum.to_esri_wkt(), self.prime_mer.to_esri_wkt(), self.angunit.to_esri_wkt(), self.twin_ax[0].esri_wkt, self.twin_ax[1].esri_wkt )
+        return 'GEOGCS["%s", %s, %s, %s, AXIS["Lon", %s], AXIS["Lat", %s]]' % (
+        self.name, self.datum.to_esri_wkt(), self.prime_mer.to_esri_wkt(), self.angunit.to_esri_wkt(),
+        self.twin_ax[0].esri_wkt, self.twin_ax[1].esri_wkt)
 
-#PROJCS
+
+# PROJCS
 class ProjCS(CS):
     """
     A projected coordinate system where the coordinates are projected to euclidean x,y space.
-    
+
     Attributes:
 
     - **cs_type**: Type of CRS, always "Projected".
@@ -136,12 +166,12 @@ class ProjCS(CS):
     - **unit**: A pycrs.elements.parameters.Unit instance, representing the angular unit in which
                 coordinates are measured.
     - **twin_ax**: A pair of pycrs.elements.directions.North/South/East/West instances, one for each axis,
-                representing the compass direction in which each axis increases. Defaults to East and North. 
+                representing the compass direction in which each axis increases. Defaults to East and North.
     """
 
     ogc_wkt = "PROJCS"
     esri_wkt = "PROJCS"
-    
+
     def __init__(self, name, geogcs, proj, params, unit, twin_ax=None):
         """
         Arguments:
@@ -153,18 +183,28 @@ class ProjCS(CS):
         - **unit**: A pycrs.elements.parameters.Unit instance, representing the angular unit in which
                     coordinates are measured.
         - **twin_ax**: A pair of pycrs.elements.directions.North/South/East/West instances, one for each axis,
-                    representing the compass direction in which each axis increases. Defaults to East and North. 
+                    representing the compass direction in which each axis increases. Defaults to East and North.
         """
         self.cs_type = "Projected"
         self.name = name
         self.geogcs = geogcs
         self.proj = proj
-        self.params = params
         self.unit = unit
+        # ZACH UPDATES
+        self.params = Param(params[0][0], params[0][1])
+        for name, value in params[1:]:
+            setattr(self.params, name, value)
+        # ZACH UPDATES END
         if twin_ax == None:
             # default axes
             twin_ax = directions.East(), directions.North()
         self.twin_ax = twin_ax
+
+    def get_params(self):
+        """
+        Returns a list of parameters as dictionaries with 'name' and 'value'.
+        """
+        return self.params
 
     def to_proj4(self, as_dict=False):
         """
@@ -178,15 +218,16 @@ class ProjCS(CS):
         string += " %s" % self.geogcs.to_proj4(toplevel=False)
         string += " " + " ".join(param.to_proj4() for param in self.params)
         string += " %s" % self.unit.to_proj4()
-        string += " +axis=" + self.twin_ax[0].proj4 + self.twin_ax[1].proj4 + "u" # up set as default because only proj4 can set it I think...
+        string += " +axis=" + self.twin_ax[0].proj4 + self.twin_ax[
+            1].proj4 + "u"  # up set as default because only proj4 can set it I think...
         string += " +no_defs"
-        
+
         if as_dict:
             return dict([
-                        entry.lstrip('+').split('=')
-                        for entry in string.split()
-                        if entry != "+no_defs"
-                         ])
+                entry.lstrip('+').split('=')
+                for entry in string.split()
+                if entry != "+no_defs"
+            ])
         else:
             return string
 
@@ -194,21 +235,21 @@ class ProjCS(CS):
         """
         Returns the CS as a OGC WKT formatted string.
         """
-        string = 'PROJCS["%s", %s, %s, ' % (self.name, self.geogcs.to_ogc_wkt(), self.proj.to_ogc_wkt() )
+        string = 'PROJCS["%s", %s, %s, ' % (self.name, self.geogcs.to_ogc_wkt(), self.proj.to_ogc_wkt())
         string += ", ".join(param.to_ogc_wkt() for param in self.params)
         string += ', %s' % self.unit.to_ogc_wkt()
-        string += ', AXIS["X", %s], AXIS["Y", %s]]' % (self.twin_ax[0].ogc_wkt, self.twin_ax[1].ogc_wkt )
+        string += ', AXIS["X", %s], AXIS["Y", %s]]' % (self.twin_ax[0].ogc_wkt, self.twin_ax[1].ogc_wkt)
         return string
-    
+
     def to_esri_wkt(self):
         """
         Returns the CS as a ESRI WKT formatted string.
         """
-        string = 'PROJCS["%s", %s, %s, ' % (self.name, self.geogcs.to_esri_wkt(), self.proj.to_esri_wkt() )
+        string = 'PROJCS["%s", %s, %s, ' % (self.name, self.geogcs.to_esri_wkt(), self.proj.to_esri_wkt())
         string += ", ".join(param.to_esri_wkt() for param in self.params)
         string += ', %s' % self.unit.to_esri_wkt()
-        string += ', AXIS["X", %s], AXIS["Y", %s]]' % (self.twin_ax[0].esri_wkt, self.twin_ax[1].esri_wkt )
+        string += ', AXIS["X", %s], AXIS["Y", %s]]' % (self.twin_ax[0].esri_wkt, self.twin_ax[1].esri_wkt)
         return string
 
 
-    
+
